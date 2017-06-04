@@ -44,7 +44,8 @@ class PyThread(Thread):
 		self.tubeNommepath=tubeNommepath
 		self.end=False
 		self.count=0
-		self.f="mesure.txt"
+		self.mesure_directory="../mesure/"
+		self.f=self.mesure_directory+"mesure.txt"
 		with open(self.f,"w"):
 			pass
 	def run(self):
