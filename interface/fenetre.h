@@ -11,7 +11,9 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/imgproc/types_c.h"
 
-#include "../vision.h"
+#include "../vision/vision.h"
+
+//classe gérant l'affichage d'une image et le nombre d'image traité par seconde
 class StreamImage:public QWidget
 {
 	Q_OBJECT
@@ -30,31 +32,29 @@ class StreamImage:public QWidget
 	void paintEvent(QPaintEvent* event);
 };
 
-
-class AffichageDistance:public QWidget
-{
-	Q_OBJECT
-	public:
-	AffichageDistance(QWidget *parent=0);
-	void setDistance(float distance);
-
-	private:
-	float m_distance;
-	protected:
-	void paintEvent(QPaintEvent*event);
-};
-
-
+//~ 
+//~ class AffichageDistance:public QWidget
+//~ {
+	//~ Q_OBJECT
+	//~ public:
+	//~ AffichageDistance(QWidget *parent=0);
+	//~ void setDistance(float distance);
+//~ 
+	//~ private:
+	//~ float m_distance;
+	//~ protected:
+	//~ void paintEvent(QPaintEvent*event);
+//~ };
 
 
+
+//classe de la fenetre principale
 class Fenetre:public QWidget
 {
 	Q_OBJECT
 	public:
 	Fenetre();
 	~Fenetre();
-	StreamImage *ptrRenderareaImage();
-	AffichageDistance *ptrRenderareaUWB();
 	QTimer* m_timer;
 
 	
@@ -63,15 +63,15 @@ class Fenetre:public QWidget
 	QVBoxLayout *m_vlayout;
 	QHBoxLayout *m_hlayout;
 	QPixmap *m_pixmap;
-	QPixmap *m_pixmaporg;
 	StreamImage *m_renderareaImage;
-	AffichageDistance *m_renderareaUWB;
+	StreamImage *m_renderareaImage2;
 	Vision *m_vision;
 	
 	protected:
 	void paintEvent(QPaintEvent*event);
-};
+	void keyReleaseEvent(QKeyEvent *event);
 
+};
 
 
 #endif

@@ -4,12 +4,10 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-#include "vision.h"
+#include "vision/vision.h"
 
-#define MAIN_TEXTURE_WIDTH 320
-#define MAIN_TEXTURE_HEIGHT 240
 
-d
+
 int main(int argc, char **argv)
 {
 	QApplication app(argc, argv);
@@ -18,13 +16,13 @@ int main(int argc, char **argv)
     test.showFullScreen();
  
     return app.exec();
-/*	Vision test;
-	for(int i=0;i<1000;i++)
+	/*Vision test;
+	for(int i=0;i<10000;i++)
 	{
 		test.glPipeline();
 		cv::namedWindow("test",cv::WINDOW_NORMAL);
 		//cv::setWindowProperty("test",cv::WND_PROP_FULLSCREEN,cv::WINDOW_FULLSCREEN);
-		cv::imshow("test",test.getCVMat());
+		cv::imshow("test",test.getCVMatOut());
 		if(cv::waitKey(1)>=0)
 		  {
 			//cv::imwrite( "image/glimageedge.jpg", img );

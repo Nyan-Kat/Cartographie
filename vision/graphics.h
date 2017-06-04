@@ -58,6 +58,10 @@ public:
 
 	bool CreateRGBA(int width, int height, const void* data = NULL);
 	bool CreateGreyScale(int width, int height, const void* data = NULL);
+	bool CreatePixelArray(int width,const void* data=NULL);
+	bool setPixelArray(const void* data=NULL);
+
+
 	bool GenerateFrameBuffer();
 	void SetPixels(const void* data);
 	GLuint GetId() { return Id; }
@@ -73,3 +77,11 @@ void DrawYUVTextureRect(GfxTexture* ytexture, GfxTexture* utexture, GfxTexture* 
 void DrawCanny1Rect(GfxTexture* texture, float x0, float y0, float x1, float y1, GfxTexture* render_target);
 void DrawCanny2Rect(GfxTexture* texture, float x0, float y0, float x1, float y1, float thrdown,float thrup, GfxTexture* render_target);
 void DrawCanny3Rect(GfxTexture* texture, float x0, float y0, float x1, float y1,float thr,GfxTexture* render_target);
+
+void DrawSLICCalcDistRect(GfxTexture* texture1,GfxTexture* texture2[],GfxTexture* texcentroidsy[],GfxTexture* texcentroidcolor[], float x0, float y0, float x1, float y1,GfxTexture* render_target[]);
+void DrawSPBoudariesRect(GfxTexture* spboundaries,float x0, float y0, float x1, float y1,GfxTexture* render_target)
+;
+void DrawBlurredRect(GfxTexture* texture, float x0, float y0, float x1, float y1, GfxTexture* render_target);
+void DrawMedianRect(GfxTexture* texture, float x0, float y0, float x1, float y1, GfxTexture* render_target)
+;
+void DrawSPMatchEdgesRect(GfxTexture* edge,GfxTexture* spboundaries,float x0, float y0, float x1, float y1,GfxTexture* render_target);

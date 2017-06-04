@@ -15,9 +15,9 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 //sur http://robotblogging.blogspot.fr/2013/10/gpu-accelerated-camera-processing-on.html et https://jan.newmarch.name/LinuxSound/Diversions/RaspberryPiOpenGL/
-#define MAIN_TEXTURE_WIDTH 320
-#define MAIN_TEXTURE_HEIGHT 240
-
+#define MAIN_TEXTURE_WIDTH 256
+#define MAIN_TEXTURE_HEIGHT 256
+#define NB_SP 256 //nombre de super_pixels. Laisser à 256 sinon problème
 #define check() assert(glGetError() == 0)
 
 uint32_t GScreenWidth=MAIN_TEXTURE_WIDTH;
@@ -36,22 +36,57 @@ GfxShader GCanny1FS;
 GfxShader GCanny2FS;
 GfxShader GCanny3FS;
 
+GfxShader GSLICCalcDistVS;
+GfxShader GSLICCalcDist1FS;
+GfxShader GSLICCalcDist2FS;
+
+GfxShader GSPBoundariesFS;
+
+GfxShader GSPMatchEdgesFS;
+
+
+
+
+
+
 
 GfxProgram GSimpleProg;
 GfxProgram GYUVProg;
-
 
 
 GfxProgram GCanny1;
 GfxProgram GCanny2;
 GfxProgram GCanny3;
 
+GfxProgram GSLICCalcDist1;
+GfxProgram GSLICCalcDist2;
+
+GfxProgram GSPBoundaries;
+
+GfxProgram GSPMatchEdges;
+
+
+
 
 GLuint GQuadVertexBuffer;
 
+
+
+
+
+
+
+
+GfxShader GBlurFS;
+GfxProgram GBlurProg;
+GfxShader GMedianFS;
+GfxProgram GMedianProg;
+
+
+
 static EGL_DISPMANX_WINDOW_T nativewindow;
 
-
+//initialisation opengl pour raspi
 void InitGraphics()
 {
 
@@ -62,7 +97,6 @@ void InitGraphics()
 	EGLint num_config;
 
 	
-
 	DISPMANX_ELEMENT_HANDLE_T dispman_element;
 	DISPMANX_DISPLAY_HANDLE_T dispman_display;
 	DISPMANX_UPDATE_HANDLE_T dispman_update;
@@ -165,14 +199,30 @@ void InitGraphics()
 	glClear( GL_COLOR_BUFFER_BIT );
 
 	//load the test shaders
-	GSimpleVS.LoadVertexShader("shaders/simplevertshader.glsl");
-	GSimpleFS.LoadFragmentShader("shaders/simplefragshader.glsl");
+	GSimpleVS.LoadVertexShader("../shaders/simplevertshader.glsl");
+	GSimpleFS.LoadFragmentShader("../shaders/simplefragshader.glsl");
 	
-	GYUVFS.LoadFragmentShader("shaders/yuvfragshader.glsl");
+	GYUVFS.LoadFragmentShader("../shaders/yuvfragshader.glsl");
 	
-	GCanny1FS.LoadFragmentShader("shaders/cannyetape1FS.glsl");
-	GCanny2FS.LoadFragmentShader("shaders/cannyetape2FS.glsl");
-	GCanny3FS.LoadFragmentShader("shaders/cannyetape3FS.glsl");
+	GCanny1FS.LoadFragmentShader("../shaders/cannyetape1FS.glsl");
+	GCanny2FS.LoadFragmentShader("../shaders/cannyetape2FS.glsl");
+	GCanny3FS.LoadFragmentShader("../shaders/cannyetape3FS.glsl");
+	
+	GSLICCalcDistVS.LoadVertexShader("../shaders/GSLICCalcDistVS.glsl");
+	GSLICCalcDist1FS.LoadFragmentShader("../shaders/GSLICCalcDist1FS.glsl");
+	GSLICCalcDist2FS.LoadFragmentShader("../shaders/GSLICCalcDist2FS.glsl");	
+	
+	GSPBoundariesFS.LoadFragmentShader("../shaders/GSPBoundariesFS.glsl");
+	
+	GSPMatchEdgesFS.LoadFragmentShader("../shaders/GSPMatchEdgesFS.glsl");
+	
+	
+	
+	GMedianFS.LoadFragmentShader("../shaders/medianfragshader.glsl");
+	GBlurFS.LoadFragmentShader("../shaders/blurfragshader.glsl");
+
+	
+	
 	
 	GSimpleProg.Create(&GSimpleVS,&GSimpleFS);
 	GYUVProg.Create(&GSimpleVS,&GYUVFS);
@@ -180,6 +230,16 @@ void InitGraphics()
 	GCanny1.Create(&GSimpleVS,&GCanny1FS);
 	GCanny2.Create(&GSimpleVS,&GCanny2FS);
 	GCanny3.Create(&GSimpleVS,&GCanny3FS);
+	
+	GSLICCalcDist1.Create(&GSLICCalcDistVS,&GSLICCalcDist1FS);
+	GSLICCalcDist2.Create(&GSLICCalcDistVS,&GSLICCalcDist2FS);
+	
+	GSPBoundaries.Create(&GSimpleVS,&GSPBoundariesFS);
+	
+	GSPMatchEdges.Create(&GSimpleVS,&GSPMatchEdgesFS);
+	
+	GBlurProg.Create(&GSimpleVS,&GBlurFS);
+	GMedianProg.Create(&GSimpleVS,&GMedianFS);
 	check();
 
 	//create  vertex buffer
@@ -338,22 +398,29 @@ bool GfxProgram::Create(GfxShader* vertex_shader, GfxShader* fragment_shader)
 	return true;	
 }
 
+//Permet de copier une texture dans une autre ou de renvoyer la texture vers le cpu après utilisation de glReadPixels et une render_target=NULL
 void DrawTextureRect(GfxTexture* texture, float x0, float y0, float x1, float y1, GfxTexture* render_target)
 {
+	//on précise si on doit enregistrer le résultat dans une texture. 
+	
 	if(render_target)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER,render_target->GetFramebufferId());
 		glViewport ( 0, 0, render_target->GetWidth(), render_target->GetHeight() );
 		check();
 	}
+	
+	//on précise le programme à utiliser
 
 	glUseProgram(GSimpleProg.GetId());	check();
 
+	//on envoie les données au gpu suivant les variables spécifiées dans les shaders 
 	glUniform2f(glGetUniformLocation(GSimpleProg.GetId(),"offset"),x0,y0);
 	glUniform2f(glGetUniformLocation(GSimpleProg.GetId(),"scale"),x1-x0,y1-y0);
 	glUniform1i(glGetUniformLocation(GSimpleProg.GetId(),"tex"), 0);
 	check();
 
+	
 	glBindBuffer(GL_ARRAY_BUFFER, GQuadVertexBuffer);	check();
 	glBindTexture(GL_TEXTURE_2D,texture->GetId());	check();
 
@@ -374,7 +441,7 @@ void DrawTextureRect(GfxTexture* texture, float x0, float y0, float x1, float y1
 }
 
 
-
+//Etape 1 canny : calcul gradient (norme, orientation)
 void DrawCanny1Rect(GfxTexture* texture, float x0, float y0, float x1, float y1,GfxTexture* render_target)
 {
 	if(render_target)
@@ -413,6 +480,7 @@ void DrawCanny1Rect(GfxTexture* texture, float x0, float y0, float x1, float y1,
 	}
 }
 
+//Etape 2 canny
 void DrawCanny2Rect(GfxTexture* texture, float x0, float y0, float x1, float y1, float thrdown,float thrup, GfxTexture* render_target)
 {
 	if(render_target)
@@ -456,6 +524,7 @@ void DrawCanny2Rect(GfxTexture* texture, float x0, float y0, float x1, float y1,
 
 void DrawCanny3Rect(GfxTexture* texture, float x0, float y0, float x1, float y1, float thr, GfxTexture* render_target)
 {
+	
 	if(render_target)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER,render_target->GetFramebufferId());
@@ -465,7 +534,7 @@ void DrawCanny3Rect(GfxTexture* texture, float x0, float y0, float x1, float y1,
 
 	glUseProgram(GCanny3.GetId());	check();
 	
-	glUniform2f(glGetUniformLocation(GCanny3.GetId(),"offset"),x0,y0);https://jan.newmarch.name/LinuxSound/Diversions/RaspberryPiOpenGL/
+	glUniform2f(glGetUniformLocation(GCanny3.GetId(),"offset"),x0,y0);
 	glUniform2f(glGetUniformLocation(GCanny3.GetId(),"scale"),x1-x0,y1-y0);
 	glUniform1i(glGetUniformLocation(GCanny3.GetId(),"inputImageTexture"), 0);
 	glUniform2f(glGetUniformLocation(GCanny3.GetId(),"texelsize"), 1.f/float(MAIN_TEXTURE_WIDTH),1.f/float(MAIN_TEXTURE_HEIGHT));
@@ -493,7 +562,252 @@ void DrawCanny3Rect(GfxTexture* texture, float x0, float y0, float x1, float y1,
 	}
 }
 
+	
 
+void DrawSLICCalcDistRect(GfxTexture* texture1,GfxTexture* texcentroidsx[],GfxTexture* texcentroidsy[],GfxTexture* texcentroidcolor[],float x0, float y0, float x1, float y1,GfxTexture* render_target[])
+{
+
+	glBindFramebuffer(GL_FRAMEBUFFER,render_target[0]->GetFramebufferId());
+	glViewport ( 0, 0, render_target[0]->GetWidth(), render_target[0]->GetHeight() );
+	check();
+
+	glUseProgram(GSLICCalcDist1.GetId());	check();
+	
+	
+
+	float k=std::sqrt(float(MAIN_TEXTURE_WIDTH*MAIN_TEXTURE_HEIGHT)/NB_SP);
+	int nbx=int(float(MAIN_TEXTURE_WIDTH)/k);
+	int nby=int(float(MAIN_TEXTURE_HEIGHT)/k);
+
+	unsigned char centroidsx[NB_SP];	
+	unsigned char centroidsy[NB_SP];
+	
+	for(int i=0;i<NB_SP;i++)
+	{
+		unsigned short x=i%nbx*k+k/2;
+		unsigned short y=i/nbx*k+k/2;
+	
+		centroidsx[i]=x;
+		centroidsy[i]=y;
+
+	}
+	
+	float kgl=k*1./MAIN_TEXTURE_WIDTH;
+	
+	
+	texcentroidsx[0]->setPixelArray(centroidsx);
+	texcentroidsy[0]->setPixelArray(centroidsy);
+
+	
+	
+	
+	glUniform2f(glGetUniformLocation(GSLICCalcDist1.GetId(),"offset"),x0,y0);
+	glUniform2f(glGetUniformLocation(GSLICCalcDist1.GetId(),"scale"),x1-x0,y1-y0);
+
+	glUniform1f(glGetUniformLocation(GSLICCalcDist1.GetId(),"spSize"), kgl);
+	
+	glUniform1i(glGetUniformLocation(GSLICCalcDist1.GetId(),"nbx"), nbx);
+	glUniform1i(glGetUniformLocation(GSLICCalcDist1.GetId(),"I1"), 0);
+	glUniform1i(glGetUniformLocation(GSLICCalcDist1.GetId(),"I2"), 1);
+	glUniform1i(glGetUniformLocation(GSLICCalcDist1.GetId(),"I3"), 2);
+
+	
+	
+	glBindBuffer(GL_ARRAY_BUFFER, GQuadVertexBuffer);	check();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D,texture1->GetId()); check();
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D,texcentroidsx[0]->GetId()); check();
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D,texcentroidsy[0]->GetId()); check();
+	glActiveTexture(GL_TEXTURE0);
+	check();
+
+	
+
+
+	GLuint loc = glGetAttribLocation(GSLICCalcDist1.GetId(),"vertex");
+	glVertexAttribPointer(loc, 4, GL_FLOAT, 0, 0, 0);	check();
+	glEnableVertexAttribArray(loc);	check();
+	glDrawArrays ( GL_TRIANGLE_STRIP, 0, 4 ); check();
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER,0);
+	glViewport ( 0, 0, GScreenWidth, GScreenHeight );
+	
+}
+	
+	
+	
+//trace les bords des superpixels
+void DrawSPBoudariesRect(GfxTexture* sp,float x0, float y0, float x1, float y1,GfxTexture* render_target)
+{
+	
+		if(render_target)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER,render_target->GetFramebufferId());
+		glViewport ( 0, 0, render_target->GetWidth(), render_target->GetHeight() );
+		check();
+	}
+
+	glUseProgram(GSPBoundaries.GetId());	check();
+	
+	glUniform2f(glGetUniformLocation(GSPBoundaries.GetId(),"offset"),x0,y0);
+	glUniform2f(glGetUniformLocation(GSPBoundaries.GetId(),"scale"),x1-x0,y1-y0);
+	glUniform1i(glGetUniformLocation(GSPBoundaries.GetId(),"I1"), 0);
+	glUniform2f(glGetUniformLocation(GSPBoundaries.GetId(),"texelsize"), 1.f/float(MAIN_TEXTURE_WIDTH),1.f/float(MAIN_TEXTURE_HEIGHT));
+
+	
+	check();
+	
+	glBindBuffer(GL_ARRAY_BUFFER, GQuadVertexBuffer);	check();
+	glBindTexture(GL_TEXTURE_2D,sp->GetId()); check();
+
+
+	GLuint loc = glGetAttribLocation(GSimpleProg.GetId(),"vertex");
+	glVertexAttribPointer(loc, 4, GL_FLOAT, 0, 0, 0);	check();
+	glEnableVertexAttribArray(loc);	check();
+	glDrawArrays ( GL_TRIANGLE_STRIP, 0, 4 ); check();
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	if(render_target)
+	{
+		//glFinish();	check();
+		//glFlush(); check();
+		glBindFramebuffer(GL_FRAMEBUFFER,0);
+		glViewport ( 0, 0, GScreenWidth, GScreenHeight );
+	}
+	
+}
+
+//renvoie une texture indiquant pour chaque pixel sa luminescence, l'id du superpixel auquel il appartient, si il est proche d'uun contour
+void DrawSPMatchEdgesRect(GfxTexture* edge,GfxTexture* sp,float x0, float y0, float x1, float y1,GfxTexture* render_target)
+{
+	
+	
+		if(render_target)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER,render_target->GetFramebufferId());
+		glViewport ( 0, 0, render_target->GetWidth(), render_target->GetHeight() );
+		check();
+	}
+
+	glUseProgram(GSPMatchEdges.GetId());	check();
+	
+	glUniform2f(glGetUniformLocation(GSPMatchEdges.GetId(),"offset"),x0,y0);
+	glUniform2f(glGetUniformLocation(GSPMatchEdges.GetId(),"scale"),x1-x0,y1-y0);
+	glUniform1i(glGetUniformLocation(GSPMatchEdges.GetId(),"Ispb"), 0);
+	glUniform1i(glGetUniformLocation(GSPMatchEdges.GetId(),"Iedge"), 1);
+	glUniform2f(glGetUniformLocation(GSPMatchEdges.GetId(),"texelsize"), 1.f/float(MAIN_TEXTURE_WIDTH),1.f/float(MAIN_TEXTURE_HEIGHT));
+
+	
+	check();
+	
+	glBindBuffer(GL_ARRAY_BUFFER, GQuadVertexBuffer);	check();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D,sp->GetId()); check();
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D,edge->GetId()); check();
+	glActiveTexture(GL_TEXTURE0);
+
+	GLuint loc = glGetAttribLocation(GSimpleProg.GetId(),"vertex");
+	glVertexAttribPointer(loc, 4, GL_FLOAT, 0, 0, 0);	check();
+	glEnableVertexAttribArray(loc);	check();
+	glDrawArrays ( GL_TRIANGLE_STRIP, 0, 4 ); check();
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	if(render_target)
+	{
+		//glFinish();	check();
+		//glFlush(); check();
+		glBindFramebuffer(GL_FRAMEBUFFER,0);
+		glViewport ( 0, 0, GScreenWidth, GScreenHeight );
+	}
+	
+	
+}	
+
+//applique un blur à la texture
+void DrawBlurredRect(GfxTexture* texture, float x0, float y0, float x1, float y1, GfxTexture* render_target)
+{
+	if(render_target)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER,render_target->GetFramebufferId());
+		glViewport ( 0, 0, render_target->GetWidth(), render_target->GetHeight() );
+		check();
+	}
+
+	glUseProgram(GBlurProg.GetId());	check();
+
+	glUniform2f(glGetUniformLocation(GBlurProg.GetId(),"offset"),x0,y0);
+	glUniform2f(glGetUniformLocation(GBlurProg.GetId(),"scale"),x1-x0,y1-y0);
+	glUniform1i(glGetUniformLocation(GBlurProg.GetId(),"tex"), 0);
+	glUniform2f(glGetUniformLocation(GBlurProg.GetId(),"texelsize"),1.f/float(MAIN_TEXTURE_WIDTH),1.f/float(MAIN_TEXTURE_HEIGHT));
+	check();
+
+	glBindBuffer(GL_ARRAY_BUFFER, GQuadVertexBuffer);	check();
+	glBindTexture(GL_TEXTURE_2D,texture->GetId());	check();
+
+	GLuint loc = glGetAttribLocation(GSimpleProg.GetId(),"vertex");
+	glVertexAttribPointer(loc, 4, GL_FLOAT, 0, 16, 0);	check();
+	glEnableVertexAttribArray(loc);	check();
+	glDrawArrays ( GL_TRIANGLE_STRIP, 0, 4 ); check();
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	if(render_target)
+	{
+		//glFinish();	check();
+		//glFlush(); check();
+		glBindFramebuffer(GL_FRAMEBUFFER,0);
+		glViewport ( 0, 0, GScreenWidth, GScreenHeight );
+	}
+}	
+
+//applique un filtre médian à la texture
+void DrawMedianRect(GfxTexture* texture, float x0, float y0, float x1, float y1, GfxTexture* render_target)
+{
+	if(render_target)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER,render_target->GetFramebufferId());
+		glViewport ( 0, 0, render_target->GetWidth(), render_target->GetHeight() );
+		check();
+	}
+
+	glUseProgram(GMedianProg.GetId());	check();
+
+	glUniform2f(glGetUniformLocation(GMedianProg.GetId(),"offset"),x0,y0);
+	glUniform2f(glGetUniformLocation(GMedianProg.GetId(),"scale"),x1-x0,y1-y0);
+	glUniform1i(glGetUniformLocation(GMedianProg.GetId(),"tex"), 0);
+	glUniform2f(glGetUniformLocation(GMedianProg.GetId(),"texelsize"),1.f/float(MAIN_TEXTURE_WIDTH),1.f/float(MAIN_TEXTURE_HEIGHT));
+	check();
+
+	glBindBuffer(GL_ARRAY_BUFFER, GQuadVertexBuffer);	check();
+	glBindTexture(GL_TEXTURE_2D,texture->GetId());	check();
+
+	GLuint loc = glGetAttribLocation(GSimpleProg.GetId(),"vertex");
+	glVertexAttribPointer(loc, 4, GL_FLOAT, 0, 16, 0);	check();
+	glEnableVertexAttribArray(loc);	check();
+	glDrawArrays ( GL_TRIANGLE_STRIP, 0, 4 ); check();
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	if(render_target)
+	{
+		//glFinish();	check();
+		//glFlush(); check();
+		glBindFramebuffer(GL_FRAMEBUFFER,0);
+		glViewport ( 0, 0, GScreenWidth, GScreenHeight );
+	}
+}	 
+
+
+
+//permet de convertir une texture YUV en texture RGB
 void DrawYUVTextureRect(GfxTexture* ytexture, GfxTexture* utexture, GfxTexture* vtexture, float x0, float y0, float x1, float y1, GfxTexture* render_target)
 {
 	if(render_target)
@@ -501,7 +815,7 @@ void DrawYUVTextureRect(GfxTexture* ytexture, GfxTexture* utexture, GfxTexture* 
 		glBindFramebuffer(GL_FRAMEBUFFER,render_target->GetFramebufferId());
 		glViewport ( 0, 0, render_target->GetWidth(), render_target->GetHeight() );
 		check();
-	}https://jan.newmarch.name/LinuxSound/Diversions/RaspberryPiOpenGL/
+	}
 
 	glUseProgram(GYUVProg.GetId());	check();
 
@@ -538,6 +852,8 @@ void DrawYUVTextureRect(GfxTexture* ytexture, GfxTexture* utexture, GfxTexture* 
 	}
 }
 
+
+//creer une texture de taille width*height pouvant contenir une image en niveau de gris (si grey =true) 
 GfxTexture::GfxTexture(int width, int height,bool grey)
 {
 	if(grey)
@@ -551,7 +867,7 @@ GfxTexture::GfxTexture(int width, int height,bool grey)
 		this->GenerateFrameBuffer();
 }
 
-
+//creer une texture pouvant contenir une image RGB
 bool GfxTexture::CreateRGBA(int width, int height, const void* data)
 {
 	Width = width;
@@ -570,6 +886,8 @@ bool GfxTexture::CreateRGBA(int width, int height, const void* data)
 	return true;
 }
 
+
+//creer une texture pouvant contenir une image en niveau de gris
 bool GfxTexture::CreateGreyScale(int width, int height, const void* data)
 {
 	Width = width;
@@ -602,13 +920,53 @@ bool GfxTexture::GenerateFrameBuffer()
 	return true;
 }
 
+
+
+//
 void GfxTexture::SetPixels(const void* data)
 {
 	glBindTexture(GL_TEXTURE_2D, Id);
 	check();
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, Width, Height, IsRGBA ? GL_RGB : GL_LUMINANCE, GL_UNSIGNED_BYTE, data);
+	//glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,320,240,0,GL_RGB,GL_UNSIGNED_BYTE,data);
 	check();
 	glBindTexture(GL_TEXTURE_2D, 0);
 	check();
 }
 
+//créer une texture pour contenir un tableau de donnée
+bool GfxTexture::CreatePixelArray(int width,const void* data)
+{
+	
+	Width = width;
+	Height = 1;
+	glGenTextures(1, &Id);
+	check();
+	glBindTexture(GL_TEXTURE_2D, Id);
+	check();
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, Width, Height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, data);
+	check();
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLfloat)GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLfloat)GL_NEAREST);
+	check();
+	glBindTexture(GL_TEXTURE_2D, 0);
+	IsRGBA = false;
+	this->GenerateFrameBuffer();
+
+	return true;
+	
+}
+
+//permet de charger un tableau dans la texture
+bool GfxTexture::setPixelArray(const void* data)
+{
+	glBindTexture(GL_TEXTURE_2D, Id);
+	check();
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0,0, Width,Height, GL_LUMINANCE, GL_UNSIGNED_BYTE, data);
+	//glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,320,240,0,GL_RGB,GL_UNSIGNED_BYTE,data);
+	check();
+	glBindTexture(GL_TEXTURE_2D, 0);
+	check();
+	
+	
+}
