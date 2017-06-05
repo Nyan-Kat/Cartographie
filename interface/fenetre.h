@@ -59,17 +59,25 @@ class Fenetre:public QWidget
 
 	
 	private:
-	QPushButton *m_button;
+	QPushButton *m_button_quit;
+	QPushButton *m_button_left;
+	QPushButton *m_button_right;
 	QVBoxLayout *m_vlayout;
 	QHBoxLayout *m_hlayout;
+	QHBoxLayout *m_hlayout_buttons;
+
 	QPixmap *m_pixmap;
-	StreamImage *m_renderareaImage;
-	StreamImage *m_renderareaImage2;
+	StreamImage *m_renderareaImage; //image de gauche dans l'application
+	StreamImage *m_renderareaImage2;//image de droite dans l'application
 	Vision *m_vision;
 	
 	protected:
 	void paintEvent(QPaintEvent*event);
 	void keyReleaseEvent(QKeyEvent *event);
+	
+	public slots:
+	 void change_image_l();	 
+	 void change_image_r();
 
 };
 

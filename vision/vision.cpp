@@ -334,12 +334,12 @@ cv::Mat Vision::spfusion()
 				}
 				
 				spColorSum[3*spId]+=temp.at<cv::Vec3b>(i,j)[0];
-				spColorSum[3*spId+1]+=temp.at<cv::Vec3b>(i,j)[1]*0;
-				spColorSum[3*spId+2]+=temp.at<cv::Vec3b>(i,j)[2]*0;
+				spColorSum[3*spId+1]+=temp.at<cv::Vec3b>(i,j)[1];
+				//spColorSum[3*spId+2]+=temp.at<cv::Vec3b>(i,j)[2]*0;
 				
 				spColor2Mean[3*spId]+=temp.at<cv::Vec3b>(i,j)[0]*temp.at<cv::Vec3b>(i,j)[0];
-				spColor2Mean[3*spId+1]+=temp.at<cv::Vec3b>(i,j)[1]*temp.at<cv::Vec3b>(i,j)[1]*0;
-				spColor2Mean[3*spId+2]+=temp.at<cv::Vec3b>(i,j)[2]*temp.at<cv::Vec3b>(i,j)[2]*0;
+				spColor2Mean[3*spId+1]+=temp.at<cv::Vec3b>(i,j)[1]*temp.at<cv::Vec3b>(i,j)[1];
+				//spColor2Mean[3*spId+2]+=temp.at<cv::Vec3b>(i,j)[2]*temp.at<cv::Vec3b>(i,j)[2]*0;
 				
 				spCounter[spId]+=1;
 				//std::cout<<int(m_sp.at<cv::Vec3b>(i,j)[2])<<std::endl;
@@ -377,7 +377,7 @@ cv::Mat Vision::spfusion()
 		
 	int num_ccs;
 
-	int *segmentedSP=segment_image(spColorMean,spColorVar,spIsAtABoundarie,nbx,nby,1,1.5,&num_ccs);
+	int *segmentedSP=segment_image(spColorMean,spColorVar,spIsAtABoundarie,nbx,nby,1,2,&num_ccs);
 	
 
 	

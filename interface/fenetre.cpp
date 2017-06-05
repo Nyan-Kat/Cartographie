@@ -195,20 +195,54 @@ void StreamImage::paintEvent(QPaintEvent* event)
 //~ }
 //~ 
 
+
+
+/*
+________________________________________
+|             |button_q,button_r,button_l|
+|             |                         |
+|             |                         |
+|             |     m_renderareaImage2  |
+| m_renderarea|                         |
+| Image       |                         |
+|             |                         |
+|             |                         |
+|             |                         |
+|             |                         |
+|             |                         |
+|_____________|_________________________|
+
+
+
+
+
+
+
+
+
+*/
 Fenetre::Fenetre() :QWidget()
 {
 	//setFixedSize(600,600);
 	
-	m_button=new QPushButton("Quitter");
+	m_button_quit=new QPushButton("Quitter");
+	m_button_right=new QPushButton("D");
+	m_button_left=new QPushButton("G");
 	
 	m_vlayout= new QVBoxLayout;
 	m_hlayout= new QHBoxLayout;
+	m_hlayout_buttons=new QHBoxLayout;
+	
 	m_renderareaImage= new StreamImage;
 	m_renderareaImage2= new StreamImage;
 	
 	//m_renderareaImage->setPixmap(m_pixmap);
+	m_hlayout_buttons->addWidget(m_button_quit);
+	m_hlayout_buttons->addWidget(m_button_left);
+	m_hlayout_buttons->addWidget(m_button_right);
 	
-	m_vlayout->addWidget(m_button);
+	
+	m_vlayout->addLayout(m_hlayout_buttons);
 	m_vlayout->addWidget(m_renderareaImage2);
 	
 	m_hlayout->addWidget(m_renderareaImage);
@@ -223,8 +257,9 @@ Fenetre::Fenetre() :QWidget()
 	//on raffraichit l'image toutes les 10 ms
 	QObject::connect(m_timer,SIGNAL(timeout()),this,SLOT(repaint()));
 	
-	QObject::connect(m_button,SIGNAL(clicked()),this,SLOT(close()));
-	
+	QObject::connect(m_button_quit,SIGNAL(clicked()),this,SLOT(close()));
+	QObject::connect(m_button_left,SIGNAL(clicked()),this,SLOT(change_image_l()));
+	QObject::connect(m_button_right,SIGNAL(clicked()),this,SLOT(change_image_r()));
 	m_timer->start();
 }
 
@@ -243,7 +278,7 @@ void Fenetre::paintEvent(QPaintEvent *event)
 
 }
 
-
+//gère les entrée sorties clavier
 void Fenetre::keyReleaseEvent(QKeyEvent *event)
 {
 	if(event->key()==Qt::Key_Right)
@@ -264,6 +299,18 @@ void Fenetre::keyReleaseEvent(QKeyEvent *event)
 	}
 	
 	
+	
+}
+
+void Fenetre::change_image_l()
+{
+	m_vision->changeOutput(-1);
+	
+}
+
+void Fenetre::change_image_r()
+{
+	m_vision->changeOutput(1);
 	
 }
 

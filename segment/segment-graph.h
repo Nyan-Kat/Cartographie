@@ -70,7 +70,7 @@ universe *segment_graph(int num_vertices, int num_edges, edge *edges,
 	  (pedge->w <= threshold[b])) {
 	u->join(a, b);
 	a = u->find(a);
-	threshold[a] = pedge->w + THRESHOLD(u->size(a)/15., c);
+	threshold[a] = pedge->w + THRESHOLD(u->size(a), c);
       }
     }
   }
