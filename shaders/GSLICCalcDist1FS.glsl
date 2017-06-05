@@ -24,7 +24,38 @@ int c;
 
 	vec2 coord=(tcoord+1.)/2.;
 	
-	//identifiant du centre auquel le pixel courant appartient
+	/*
+						  x=tcoord.x=tcoord[0]
+				0--------------------->256 (pixels) en coordonnées de l'image
+				0--------------------->1 (pixels) en coordonnées OpenGl
+			0 0	______________________
+			| |	|0  |1  |2  |....|15 |
+			| |	|___|___|___|____|___|
+  y=tcoord.y| | |16 |17 |18 |....|31 |
+			| |	|___|___|___|____|___|
+			| |	|         :          |
+			| |	|         :          |
+			| |	|_________:__________|
+			| |	|240|241|242|....|255|^
+			v v	|___|___|___|____|___||dy	
+	     256  1          <->          v
+						 dx
+	nbx=16
+	nby=16
+	dx=dy=spSize
+	
+	
+	La relation entre l'identifiant c du superpixel ( 0<=n<=255) et les coordonnées en pixels est :
+	
+	
+	c=E(y/dy)*nbx+E(x/dx)
+	
+	avec E la partie entière 
+	
+	
+	*/
+	
+	//identifiant du superpixel auquel le pixel courant appartient
 	c=int(tcoord[0]*1./spSize)+int(tcoord[1]*1./spSize)*nbx;
     
 	float centroidColor;
@@ -32,15 +63,13 @@ int c;
 	
 	
 	
-	
-	
-	
-	//tableau contenant les identifiants des 8 centres les plus proches
+	//tableau contenant les identifiants des 8 superpixels les plus proches
 	float cf[9];
 
+	//L'id du superpixel courant  S est placé en 8 dans le tableau cf
 
 	//0 1 2
-	//3 8 4   
+	//3 S 4   
 	//5 6 7
 
 
