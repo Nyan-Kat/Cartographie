@@ -4,8 +4,7 @@ DELETE FROM map_pieces_portes;
 DELETE FROM map_portes;
 DELETE FROM map_points;
 DELETE FROM map_pieces;
-
-
+DELETE FROM map_robot;
 
 -- Add values into points table
 ALTER SEQUENCE map_points_id_seq RESTART WITH 1;
@@ -144,3 +143,9 @@ INSERT INTO map_pieces_portes (id_piece, id_porte) VALUES (3,2);
 INSERT INTO map_pieces_portes (id_piece, id_porte) VALUES (3,3);
 INSERT INTO map_pieces_portes (id_piece, id_porte) VALUES (4,3);
 INSERT INTO map_pieces_portes (id_piece, id_porte) VALUES (4,4);
+
+ALTER SEQUENCE map_robot_id_seq RESTART WITH 1;
+INSERT INTO map_robot (pos_x, pos_y, bat, ip) VALUES (10, 10, 28, '192.168.10.12');
+INSERT INTO map_robot (pos_x, pos_y, bat, ip) VALUES (20, 15, 10, '192.168.10.13');
+INSERT INTO map_robot (pos_x, pos_y, bat, ip) VALUES (50, 11, 30, '192.168.10.14');
+INSERT INTO map_robot (pos_x, pos_y, bat, ip) VALUES (40, 12, 34, '192.168.10.16');

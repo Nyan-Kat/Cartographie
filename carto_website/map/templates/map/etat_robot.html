@@ -2,5 +2,30 @@
 
 {% block content %}
 <h2>Etat des robots</h2>
+<br>
+<br>
+
+<table class="table table-striped">
+    <thead class="text-right">
+        <tr>
+            <th>ID robot</th>
+            <th>Position</th>
+            <th>Niveau batterie</th>
+            <th>Adresse IP</th>
+        </tr>
+    </thead>
+    <tbody class="text-center">
+        {% for info in infos_robot %}
+
+            <tr>
+                <td>{{ info.id }}</td>
+                <td>({{ info.pos_x }},{{ info.pos_y }}) </td>
+                <td>{{ info.bat }} %</td>
+                <td>{{ info.ip }}</td>
+            </tr>
+
+        {% endfor %}
+    </tbody>
+</table>
 
 {% endblock %}

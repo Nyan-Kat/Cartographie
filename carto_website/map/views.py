@@ -8,7 +8,8 @@ def home(request):
 
 
 def etat_robot(request):
-    return render(request, 'map/etat_robot.html')
+    info_robot_dic = m.robot.objects.values('id', 'pos_x', 'pos_y', 'bat', 'ip')
+    return render(request, 'map/etat_robot.html', {'infos_robot': info_robot_dic})
 
 
 def carte_en_cours(request):
@@ -63,6 +64,9 @@ def historique_carte(request):
 def prendre_photo(request):
     return render(request, 'map/prendre_photo.html')
 
+
+def infos(request):
+    return render(request, 'map/infos.html')
 
 ###############################################################################################
 # Part relative to db gestion

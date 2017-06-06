@@ -55,7 +55,7 @@
     // Function to draw a door
     function draw_door(point1, point2){
         var line_door = new Path.Line(point1, point2);
-        line_door.strokeColor = "purple";
+        line_door.strokeColor = "orange";
         line_door.strokeWidth = 30/max_size;
     }
 
@@ -69,7 +69,7 @@
 <p id="p2">{{ list_door }}</p>
 -->
 
-<canvas id="canvas" width="500" height="500" margin=auto" display="block" style="background:orange"></canvas>
+<canvas id="canvas" width="500" height="500" margin=auto" display="block" style="background: rgba(144,155,255,0.58)"></canvas>
 <body/>
 
 {% endblock %}
