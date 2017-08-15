@@ -1,7 +1,8 @@
 # -*- coding: utf8 -*-
 import models as m
 from django.shortcuts import render, redirect
-
+import json
+from django.http import JsonResponse
 
 def home(request):
     return render(request, 'map/home.html')
@@ -12,7 +13,7 @@ def etat_robot(request):
     return render(request, 'map/etat_robot.html', {'infos_robot': info_robot_dic})
 
 
-def carte_en_cours(request):
+def Data_carte(request):
     rooms_id = m.pieces.objects.values('id')
     room_dic = []
     porte_dic = []
@@ -54,8 +55,11 @@ def carte_en_cours(request):
             if j[1] > max_size:
                 max_size = j[1]
 
-    return render(request, 'map/carte_en_cours.html', {'list_room': room_dic, 'list_door': porte_dic, 'size': max_size})
+    return JsonResponse({'list_room': room_dic, 'list_door': porte_dic, 'max_size': max_size})
 
+
+def carte_en_cours(request):
+    return render(request, 'map/carte_en_cours.html')
 
 def historique_carte(request):
     return render(request, 'map/historique_carte.html')

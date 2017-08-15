@@ -1,75 +1,90 @@
 {% extends "map/header.html" %}
 
-
-{% load staticfiles %}
+{% load static %}
 
 {% block content %}
-<head>
-    <script type="text/javascript" src="{% static 'paperjs/dist/paper-full.js' %}"></script>
-    <script type="text/paperscript" canvas="canvas">
+<script type="text/javascript" src="{% static 'static_jquery/js/jquery.js' %}"></script>
 
-    // Get the elements from django
-    var list_room = {{ list_room }};
-    var list_door = {{ list_door }};
-    var max_size = {{ size }};
+<h2>Carte en cours</h2>
 
-    // Display all the rooms with their walls
-    for (var i=0; i < list_room.length; i++){
+<canvas id="canvas_carte" height=500 width=500 margin=auto" display="block"
+        style="background: rgba(117,120,255,0.58); height:500px; width:500px"></canvas>
 
-        var list_point = list_room[i][1];
-        // Iterate over all points of the list
-        for (var j=0; j <= list_point.length-2; j++){
+<!-- Refresh the page every 100 s to prevent an overload of the browser with the MAP files -->
+<meta http-equiv="Refresh" content="500">
 
-           draw_wall(list_point[j], list_point[j+1]);
-        };
-        // Display the last line of list_point
-        draw_wall(list_point[0], list_point[list_point.length-1]);
-    };
+<script>
+    // Ajax Query to get the data to plot the Map
+    var MAP;
+    function refresh() {
+        $.getJSON("{% url 'Data_carte' %}", MAJ_Map)
+    }
 
-    // Display all the doors which are superposed with the walls
-    for (var i=0; i < list_door.length; i++){
+    refresh();
+    // Relaunch the function refresh every 5 s
+    setInterval(function(){refresh()}, 5000);
 
-        var list_point_door = list_door[i][1];
-        // Iterate over all points of the list
-        for (var j=0; j <= list_point_door.length-1; j++){
+    // Function to plot de Map on the canvas
+    function MAJ_Map(file) {
 
-           draw_door(list_point_door[j][0], list_point_door[j][1]);
-        };
-    };
+    // Extract the data from Ajax Query
+    var list_room = file.list_room;
+    var list_door = file.list_door;
+    var max_size = file.max_size;
+
+    // Get the canvas elements
+    var canvas = document.getElementById('canvas_carte');
+    var ctx = canvas.getContext('2d');
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Transform the canvas to orientate it correctly
-    var context = canvas.getContext('2d');
-    context.translate(0 / 2, canvas.height);
-    context.scale(1, -1);
+    ctx.setTransform(1, 0, 0, -1, 0, 500);
 
     // Resize the map to fit the most the canvas
-    context.scale((canvas.width-30)/max_size, (canvas.height-30)/max_size );
+    ctx.scale((canvas_carte.width - 30) / max_size, (canvas_carte.height - 30) / max_size);
 
-    // Function to draw a wall
-    function draw_wall(point1, point2){
-        var line_wall = new Path.Line(point1, point2);
-        line_wall.strokeColor = "black";
-        line_wall.strokeWidth = 10/max_size;
-    }
+    // Display all the rooms with their walls
+        for (var i = 0; i < list_room.length; i++) {
+            var list_point = list_room[i][1];
+            // Iterate over all points of the list
+            for (var j = 0; j <= list_point.length - 2; j++) {
+                draw_wall(list_point[j], list_point[j + 1]);
+            }
+            // Display the last line of list_point
+            draw_wall(list_point[0], list_point[list_point.length - 1]);
+        }
 
-    // Function to draw a door
-    function draw_door(point1, point2){
-        var line_door = new Path.Line(point1, point2);
-        line_door.strokeColor = "orange";
-        line_door.strokeWidth = 30/max_size;
-    }
+        // Display all the doors which are superposed with the walls
+        for (var i = 0; i < list_door.length; i++) {
+            var list_point_door = list_door[i][1];
+            // Iterate over all points of the list
+            for (var j = 0; j <= list_point_door.length - 1; j++) {
+                draw_door(list_point_door[j][0], list_point_door[j][1]);
+            }
+        }
 
-    </script>
-</head>
-<body>
-<h2>Carte en cours</h2>
-<!--
-<p id="p1">{{ size }}</p>
+        // Function to draw a wall
+        function draw_wall(point1, point2) {
+            ctx.lineWidth = 10 / max_size;
+            ctx.strokeStyle = 'black';
+            ctx.beginPath();
+            ctx.moveTo(point1[0], point1[1]);
+            ctx.lineTo(point2[0], point2[1]);
+            ctx.stroke()
+        }
 
-<p id="p2">{{ list_door }}</p>
--->
+        // Function to draw a door
+        function draw_door(point1, point2) {
+            ctx.lineWidth = 30 / max_size;
+            ctx.strokeStyle = 'orange';
+            ctx.beginPath();
+            ctx.moveTo(point1[0], point1[1]);
+            ctx.lineTo(point2[0], point2[1]);
+            ctx.stroke()
+        }
+}
 
-<canvas id="canvas" width="500" height="500" margin=auto" display="block" style="background: rgba(144,155,255,0.58)"></canvas>
-<body/>
+</script>
 
 {% endblock %}

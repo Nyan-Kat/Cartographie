@@ -4,9 +4,8 @@
 <head>
 	<title>Site Cartographie</title>
 	<meta charset="utf-8" />
-	{% load staticfiles %}
+	{% load static %}
 	<link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}" type = "text/css"/>
-	<link rel="stylesheet" href="{% static 'style.css' %}" type = "text/css"/>
 	<meta name="viewport" content = "width=device-width, initial-scale=1.0">
 
 </head>
@@ -16,7 +15,7 @@
 		<div class="row">
 			  <div class="col-sm-2">
 				  <br>
-					<img src="{% static 'img/home_picture.jpeg' %}" class="responsive-img" style='max-height:70px; text-align: center;' alt="face">
+					<img src="{{ STATIC_URL }}img/home_picture.jpeg" class="responsive-img" style='max-height:70px; text-align: center;' alt="face">
 			  </div>
 			  <div class="col-sm-10" style="text-align: center">
 				  <br>

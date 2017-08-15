@@ -1,0 +1,63 @@
+{% block content %}
+
+<script type="text/paperscript" canvas="canvas_carte">
+
+    // Get the elements from django
+    var list_room = {{ list_room }};
+    var list_door = {{ list_door }};
+    var max_size = {{ size }};
+
+    // Display all the rooms with their walls
+    for (var i=0; i < list_room.length; i++){
+
+        var list_point = list_room[i][1];
+        // Iterate over all points of the list
+        for (var j=0; j <= list_point.length-2; j++){
+
+           draw_wall(list_point[j], list_point[j+1]);
+        };
+        // Display the last line of list_point
+        draw_wall(list_point[0], list_point[list_point.length-1]);
+    };
+
+    // Display all the doors which are superposed with the walls
+    for (var i=0; i < list_door.length; i++){
+
+        var list_point_door = list_door[i][1];
+        // Iterate over all points of the list
+        for (var j=0; j <= list_point_door.length-1; j++){
+
+           draw_door(list_point_door[j][0], list_point_door[j][1]);
+        };
+    };
+
+    // Transform the canvas to orientate it correctly
+    // var canvas = document.getElementById("canvas_carte");
+    var context = canvas_carte.getContext("2d");
+    context.translate(0 / 2, canvas_carte.height);
+    context.scale(1, -1);
+
+    // Resize the map to fit the most the canvas
+    context.scale((canvas_carte.width-30)/max_size, (canvas_carte.height-30)/max_size );
+
+    // Function to draw a wall
+    function draw_wall(point1, point2){
+        var line_wall = new Path.Line(point1, point2);
+        line_wall.strokeColor = "black";
+        line_wall.strokeWidth = 10/max_size;
+    };
+
+    // Function to draw a door
+    function draw_door(point1, point2){
+        var line_door = new Path.Line(point1, point2);
+        line_door.strokeColor = "orange";
+        line_door.strokeWidth = 30/max_size;
+    };
+
+    draw_door([20.0, 20.0], [25.0, 20.0]);
+
+</script>
+
+<canvas id="canvas_carte" width="500" height="500" margin=auto" display="block" style="background: rgba(144,155,255,0.58)"></canvas>
+
+{% endblock %}
