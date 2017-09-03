@@ -1,6 +1,6 @@
 #!/bin/bash
 #https://www.theimpossiblecode.com/blog/intel-tbb-on-raspberry-pi/
-#A exécuter avec droit admin (sudo)
+#A exécuter avec droit admin (sudo) : sudo sh ....sh
 cd /home/pi/Downloads
 wget https://github.com/01org/tbb/archive/2017_U5.zip
 unzip 2017_U5.zip

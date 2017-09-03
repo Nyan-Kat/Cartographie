@@ -1,7 +1,7 @@
 #!/bin/bash
 #https://www.theimpossiblecode.com/blog/intel-tbb-on-raspberry-pi/
 #https://www.pyimagesearch/2015/10/26/how-to-install-opencv-3-on-raspbian-jessie/
-#A exécuter avec droit admin (sudo)
+#A exécuter avec droit admin (sudo) : sudo sh installation_opencv.sh
 
 sudo apt-get install build-essential git cmake pkg-config
 sudo apt-get install libjpeg8-dev libtiff5-dev libjasper-dev libpng12-dev
